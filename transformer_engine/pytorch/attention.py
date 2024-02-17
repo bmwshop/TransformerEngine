@@ -1890,6 +1890,12 @@ class DotProductAttention(torch.nn.Module):
             "attention_dropout_ctx": attention_dropout_ctx,
         }
 
+        # FA OVERRIDE FLAG
+        if os.getenv("FORCE_FLASH_ATTN", "0"):
+            warnings.warn("FORCE_FLASH_ATTN flag is set, enforcing")
+            self.use_flash_attention = True
+            self.use_fused_attention = False
+
         if self.use_flash_attention:
             self.flash_attention = FlashAttention(norm_factor,
                                                   attention_type=attention_type,
@@ -2169,6 +2175,11 @@ class DotProductAttention(torch.nn.Module):
             assert use_flash_attention, "No attention backend available for causal + padding masks."
         elif attn_mask_type == "padding":
             use_fused_attention = False
+
+        if os.getenv("FORCE_FLASH_ATTN", "0"):
+            warnings.warn("FORCE_FLASH_ATTN flag is set, enforcing")
+            use_fused_attention = False
+            use_flash_attention = True
 
         if use_fused_attention:
             fused_attention_backend = tex.get_fused_attn_backend(
